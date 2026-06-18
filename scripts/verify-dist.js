@@ -42,6 +42,7 @@ function main() {
   const pkg = JSON.parse(fs.readFileSync(PACKAGE_PATH, "utf8"));
 
   const checks = [
+    ["doctype declaration", html.startsWith("<!DOCTYPE html>")],
     ["build version meta", html.includes(`content="v${pkg.version}"`)],
     ["CSP meta", html.includes("Content-Security-Policy")],
     ["connect-src none", html.includes("connect-src 'none'")],
