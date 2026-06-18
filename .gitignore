@@ -16,3 +16,7 @@ node_modules/
 dist/
 build/
 coverage/
+
+# Git bundle sync (local / tcloud)
+*.bundle
+last_sync_id
