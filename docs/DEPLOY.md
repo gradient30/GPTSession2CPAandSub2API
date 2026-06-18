@@ -1,175 +1,250 @@
-# 部署指南：GitHub Pages + Cloudflare Pages 自动同步
+# GitHub → Cloudflare 部署文档
 
-本仓库为**纯静态单页**（`docs/index.html`）。推送到 `main` 后，GitHub Actions 会：
+纯静态单页工具（`docs/index.html`）。**一次 push，双平台同步发布。**
 
-1. 执行 `npm run acceptance`（构建 + 测试 + 验收）
-2. 部署到 **GitHub Pages**
-3. 同步部署到 **Cloudflare Pages**
-
----
-
-## 一、一次性准备
-
-### 1. 推送代码到 GitHub
-
-```bash
-git add .
-git commit -m "chore: add dual deploy workflow"
-git push origin main
-```
-
-仓库地址示例：`https://github.com/gradient30/GPTSession2CPAandSub2API`
-
-### 2. 启用 GitHub Pages（Actions 源）
-
-1. 打开 GitHub 仓库 → **Settings** → **Pages**
-2. **Build and deployment** → **Source** 选择 **GitHub Actions**
-3. 保存（首次 push 触发 `Deploy` 工作流后才会出现站点）
-
-部署成功后访问：
-
-```text
-https://<你的用户名>.github.io/GPTSession2CPAandSub2API/
-```
-
-示例：`https://gradient30.github.io/GPTSession2CPAandSub2API/`
-
-### 3. 创建 Cloudflare API Token
-
-1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
-2. 右上角头像 → **My Profile** → **API Tokens**
-3. **Create Token** → 使用模板 **Edit Cloudflare Workers** 或自定义：
-   - 权限：**Account** → **Cloudflare Pages** → **Edit**
-   - 账户范围：选择你的账号
-4. 复制生成的 Token（只显示一次）
-
-### 4. 获取 Cloudflare Account ID
-
-1. Cloudflare Dashboard 首页右侧 **Account ID**
-2. 或进入任意域名 → Overview → 右侧 **Account ID**
-
-### 5. 在 GitHub 配置 Secrets
-
-仓库 → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
-
-| Secret 名称 | 值 |
-|-------------|-----|
-| `CLOUDFLARE_API_TOKEN` | 上一步创建的 Token |
-| `CLOUDFLARE_ACCOUNT_ID` | 你的 Account ID |
-
-可选 **Variables**（非敏感）：
-
-| Variable 名称 | 值 | 说明 |
-|---------------|-----|------|
-| `CLOUDFLARE_PAGES_PROJECT` | `GPTSession2CPAandSub2API` | Cloudflare Pages 项目名，默认同仓库名 |
-
-### 6. 重要：勿重复绑定 Cloudflare Git 集成
-
-若使用本仓库的 **GitHub Actions 部署 Cloudflare**，请**不要**在 Cloudflare Pages 里再连接同一 GitHub 仓库，否则会出现**重复构建/重复部署**。
-
-正确做法：**仅由 GitHub Actions** 调用 `wrangler pages deploy` 推送到 Cloudflare。
+| 项 | 值 |
+|----|-----|
+| GitHub 仓库 | https://github.com/gradient30/GPTSession2CPAandSub2API |
+| 工作流文件 | `.github/workflows/deploy.yml` |
+| 构建命令 | `npm run acceptance` |
+| 发布目录 | `docs/`（含 `index.html`、`.nojekyll`、`favicon.svg`） |
 
 ---
 
-## 二、自动部署流程
+## 1. 部署链接总图
 
 ```mermaid
-flowchart LR
-  A[git push main] --> B[GitHub Actions: Deploy]
-  B --> C[npm run acceptance]
-  C --> D[上传 docs 产物]
-  D --> E[GitHub Pages]
-  D --> F[Cloudflare Pages]
+flowchart TB
+  subgraph dev [开发者]
+    LOCAL["本地源码 src/"]
+    PUSH["git push origin main"]
+  end
+
+  subgraph github [GitHub]
+    REPO["仓库 gradient30/GPTSession2CPAandSub2API"]
+    CI["CI 工作流<br/>.github/workflows/ci.yml"]
+    DEPLOY["Deploy 工作流<br/>.github/workflows/deploy.yml"]
+    SECRETS["Actions Secrets<br/>CLOUDFLARE_API_TOKEN<br/>CLOUDFLARE_ACCOUNT_ID"]
+    ARTIFACT["构建产物 artifact<br/>docs/"]
+  end
+
+  subgraph build [构建阶段 job: build]
+    ACCEPT["npm run acceptance"]
+    BUILD["scripts/build.js<br/>生成 docs/index.html"]
+    TEST["tests + verify + CSP 审计"]
+  end
+
+  subgraph gh_pages [GitHub Pages]
+    GHP_ENV["environment: github-pages"]
+    GHP_DEPLOY["actions/deploy-pages@v4"]
+    GHP_URL["https://gradient30.github.io/GPTSession2CPAandSub2API/"]
+  end
+
+  subgraph cloudflare [Cloudflare Pages]
+    WRANGLER["wrangler-action@v3<br/>pages deploy site"]
+    CF_PROJECT["项目 GPTSession2CPAandSub2API"]
+    CF_URL["https://GPTSession2CPAandSub2API.pages.dev/"]
+    CF_CUSTOM["可选自定义域名<br/>Workers & Pages → Custom domains"]
+  end
+
+  subgraph user [用户访问]
+    BROWSER["浏览器打开在线页面"]
+    VERIFY["核对版本 · 日期 · SHA256"]
+  end
+
+  LOCAL --> PUSH
+  PUSH --> REPO
+  REPO -->|PR / push| CI
+  REPO -->|push main / 手动触发| DEPLOY
+  SECRETS -.->|仅 Cloudflare job 使用| WRANGLER
+
+  DEPLOY --> ACCEPT
+  ACCEPT --> BUILD --> TEST --> ARTIFACT
+
+  ARTIFACT --> GHP_ENV --> GHP_DEPLOY --> GHP_URL
+  ARTIFACT --> WRANGLER --> CF_PROJECT --> CF_URL --> CF_CUSTOM
+
+  GHP_URL --> BROWSER
+  CF_URL --> BROWSER
+  CF_CUSTOM --> BROWSER
+  BROWSER --> VERIFY
 ```
 
-触发条件（见 `.github/workflows/deploy.yml`）：
-
-- 推送到 `main` / `master`
-- 或在 Actions 页手动 **Run workflow**
-
-### 工作流任务说明
-
-| Job | 作用 |
-|-----|------|
-| `build` | 验收构建，打包 `docs/` 为 artifact |
-| `deploy-github-pages` | 发布到 GitHub Pages |
-| `deploy-cloudflare-pages` | 发布到 Cloudflare Pages |
-
-PR 仅跑 CI（`.github/workflows/ci.yml`），**不会**自动部署。
-
----
-
-## 三、部署后访问地址
-
-| 平台 | 地址 |
-|------|------|
-| GitHub Pages | `https://<user>.github.io/GPTSession2CPAandSub2API/` |
-| Cloudflare Pages | `https://<project-name>.pages.dev/`（首次部署后在 CF 控制台查看） |
-
-### 自定义域名（Cloudflare）
-
-1. Cloudflare Dashboard → **Workers & Pages** → 你的项目
-2. **Custom domains** → 添加域名
-3. 按提示配置 DNS（若域名已在 Cloudflare，通常一键完成）
-
-### 校验部署未被篡改
-
-打开在线页面，核对页头：
+### 链接关系（ASCII 简图）
 
 ```text
-v1.1.0 · 2026-xx-xx · SHA256 xxxxxxxx
+开发者
+  │  git push main
+  ▼
+GitHub 仓库 ─────────────────────────────────────────────┐
+  │                                                       │
+  ├─[CI] PR/push → npm run acceptance（仅验证，不部署）    │
+  │                                                       │
+  └─[Deploy] push main / 手动 Run workflow                │
+        │                                                 │
+        ├─ build → npm run acceptance → artifact(docs/)   │
+        │                                                 │
+        ├─ deploy-github-pages ──► GitHub Pages           │
+        │     https://gradient30.github.io/GPTSession2CPAandSub2API/
+        │                                                 │
+        └─ deploy-cloudflare-pages ──► Cloudflare Pages   │
+              （需 Secrets）          https://GPTSession2CPAandSub2API.pages.dev/
+                                      └── 可选绑定自定义域名
 ```
-
-与仓库 `dist/SHA256SUMS` 或 Release 附件对比。详见 [SECURITY.md](../SECURITY.md)。
 
 ---
 
-## 四、本地预发布检查
+## 2. 访问地址一览
 
-```bash
-npm run acceptance
-```
-
-确认通过后，再 push：
-
-```bash
-git push origin main
-```
-
-在 GitHub **Actions** 页查看 `Deploy` 工作流三条 job 均为绿色。
-
----
-
-## 五、常见问题
-
-### Cloudflare 部署失败：`Authentication error`
-
-- 检查 `CLOUDFLARE_API_TOKEN` 是否过期、权限是否含 **Pages Edit**
-- 检查 `CLOUDFLARE_ACCOUNT_ID` 是否正确
-
-### GitHub Pages 404
-
-- 确认 Settings → Pages → Source 为 **GitHub Actions**
-- 首次部署需等待 1–3 分钟
-- 私有仓库需 GitHub Pro 才能用 Pages（公开仓库无此限制）
-
-### 只想部署其中一个平台
-
-- 仅 GitHub Pages：删除 `deploy.yml` 中 `deploy-cloudflare-pages` job
-- 仅 Cloudflare：删除 `deploy-github-pages` job，并可在 CF 改用 Git 直连集成
-
-### 构建日期/SHA256 每次部署会变吗？
-
-- **日期**：按 UTC 构建日写入，同一天多次部署相同
-- **SHA256**：仅当 `src/` 源码变化时改变
-
----
-
-## 六、相关文件
-
-| 文件 | 说明 |
+| 角色 | 链接 |
 |------|------|
-| `.github/workflows/deploy.yml` | 双平台部署工作流 |
-| `.github/workflows/ci.yml` | PR / push 验收（不部署） |
-| `docs/RELEASE.md` | 版本发布与 Release 附件 |
+| 源码仓库 | https://github.com/gradient30/GPTSession2CPAandSub2API |
+| Actions 运行记录 | https://github.com/gradient30/GPTSession2CPAandSub2API/actions |
+| Pages 设置 | https://github.com/gradient30/GPTSession2CPAandSub2API/settings/pages |
+| Secrets 配置 | https://github.com/gradient30/GPTSession2CPAandSub2API/settings/secrets/actions |
+| **GitHub Pages 站点** | https://gradient30.github.io/GPTSession2CPAandSub2API/ |
+| **Cloudflare Pages 站点** | https://GPTSession2CPAandSub2API.pages.dev/ |
+| Cloudflare 控制台 | https://dash.cloudflare.com/ → Workers & Pages |
+| Cloudflare API Tokens | https://dash.cloudflare.com/profile/api-tokens |
+| 上游 fork 来源 | https://github.com/gtxx3600/GPTSession2CPAandSub2API |
+
+> Cloudflare 默认域名在**首次成功部署后**于控制台确认；自定义域名在 CF 项目页添加。
+
+---
+
+## 3. 一次性配置（Checklist）
+
+按顺序完成，打勾后再首次 `git push`：
+
+- [ ] **1. 推送代码**到 `main`
+- [ ] **2. GitHub Pages**：Settings → Pages → Source 选 **GitHub Actions**
+- [ ] **3. Cloudflare Token**：Account → Cloudflare Pages → **Edit** 权限
+- [ ] **4. 复制 Account ID**（CF Dashboard 右侧）
+- [ ] **5. GitHub Secrets** 写入 `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`
+- [ ] **6. 确认未在 CF Pages 绑定同一 GitHub 仓库**（避免重复部署）
+
+### 3.1 配置 Secrets
+
+路径：仓库 → **Settings** → **Secrets and variables** → **Actions**
+
+| Secret | 说明 |
+|--------|------|
+| `CLOUDFLARE_API_TOKEN` | CF API Token（Pages Edit） |
+| `CLOUDFLARE_ACCOUNT_ID` | CF 账号 ID |
+
+GitHub Pages 部署使用内置 `GITHUB_TOKEN`，**无需**额外 Secret。
+
+### 3.2 启用 GitHub Pages
+
+1. 打开 [Pages 设置](https://github.com/gradient30/GPTSession2CPAandSub2API/settings/pages)
+2. **Build and deployment** → **Source** → **GitHub Actions**
+3. 保存
+
+---
+
+## 4. 日常发布流程
+
+```bash
+# 1. 本地验收
+npm run acceptance
+
+# 2. 提交并推送
+git add .
+git commit -m "feat: 你的变更说明"
+git push origin main
+
+# 3. 查看 Actions（约 2–5 分钟）
+#    https://github.com/gradient30/GPTSession2CPAandSub2API/actions
+#    确认 Deploy 工作流 3 个 job 均为绿色：
+#    build | deploy-github-pages | deploy-cloudflare-pages
+```
+
+**触发条件**
+
+| 事件 | CI | Deploy |
+|------|----|--------|
+| PR | ✅ 验收 | ❌ |
+| push `main` | ✅ 验收 | ✅ 双平台部署 |
+| Actions 手动 Run | — | ✅ |
+
+---
+
+## 5. 工作流内部结构
+
+文件：`.github/workflows/deploy.yml`
+
+| Job | 依赖 | 输入 | 输出 |
+|-----|------|------|------|
+| `build` | — | 源码 | artifact `site`（`docs/`） |
+| `deploy-github-pages` | `build` | artifact | GitHub Pages 站点 |
+| `deploy-cloudflare-pages` | `build` | artifact + CF Secrets | Cloudflare Pages 站点 |
+
+构建链路：
+
+```text
+src/template.html + src/lib/* + src/app.js
+        ↓  scripts/build.js
+docs/index.html（含版本 / SHA256 / CSP）
+        ↓  npm run acceptance
+artifact → 并行部署 GitHub Pages + Cloudflare Pages
+```
+
+---
+
+## 6. 部署后验证
+
+1. 打开任一在线地址（见第 2 节）
+2. 页头应显示：`v1.1.0 · 日期 · SHA256 xxxxxxxx`
+3. 开发者工具查看：`<meta name="build-sha256-full" content="...">`
+4. 与本地 `npm run build` 输出或 `dist/SHA256SUMS` 对比
+
+不一致则**不要使用**该页面处理真实 token。详见 [SECURITY.md](../SECURITY.md)。
+
+**功能冒烟（建议）**
+
+- 填入示例 → 切换 7 种输出格式 → 复制 / 下载 → 清空输入
+- DevTools → Network：除主动点击外链外应为 **0 请求**
+
+---
+
+## 7. 自定义域名（Cloudflare）
+
+1. [Cloudflare Dashboard](https://dash.cloudflare.com/) → **Workers & Pages**
+2. 选择项目 `GPTSession2CPAandSub2API`
+3. **Custom domains** → 添加域名 → 按提示配置 DNS
+
+GitHub Pages 自定义域名：在 Pages 设置中单独配置（与 CF 独立）。
+
+---
+
+## 8. 常见问题
+
+| 现象 | 处理 |
+|------|------|
+| Cloudflare job 红，Authentication error | 检查两个 Secrets 是否正确、Token 是否含 Pages Edit |
+| GitHub Pages 404 | 确认 Source 为 GitHub Actions；等待 1–3 分钟 |
+| Deploy 未触发 | 确认推送到 `main`；或 Actions 页手动 Run workflow |
+| 两平台内容不一致 | 同一 artifact 部署，若不一致多为 CDN 缓存，强刷或等几分钟 |
+| 只想部署一个平台 | 编辑 `deploy.yml` 删除不需要的 deploy job |
+| CF 与 GitHub 重复部署 | 关闭 CF Pages 的 Git 集成，仅用 Actions 推送 |
+
+---
+
+## 9. 相关文件
+
+| 文件 | 作用 |
+|------|------|
+| `.github/workflows/deploy.yml` | 双平台部署 |
+| `.github/workflows/ci.yml` | PR 验收 |
+| `scripts/build.js` | 生成 `docs/index.html` |
+| `scripts/acceptance.js` | 全量验收 |
+| `docs/RELEASE.md` | 版本 tag / Release 附件 |
 | `docs/AUDIT_CHECKLIST.md` | 发布前审核清单 |
+
+---
+
+## 10. 安全提醒
+
+- 处理真实 token 时，优先信任**本 fork 构建**的页面，并核对 SHA256
+- 不要在 Issues / PR 中粘贴 session JSON
+- 在线页面仅做本地格式转换，不上传凭证（见 [SECURITY.md](../SECURITY.md)）
