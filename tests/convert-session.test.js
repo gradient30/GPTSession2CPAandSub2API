@@ -27,11 +27,22 @@ function createFakeElement(selector, options = {}) {
         classes.delete(name);
       },
       toggle(name, force) {
+        if (force === undefined) {
+          if (classes.has(name)) {
+            classes.delete(name);
+          } else {
+            classes.add(name);
+          }
+          return;
+        }
         if (force) {
           classes.add(name);
         } else {
           classes.delete(name);
         }
+      },
+      contains(name) {
+        return classes.has(name);
       },
     },
     addEventListener(type, handler) {
@@ -49,7 +60,7 @@ function createFakeElement(selector, options = {}) {
   };
 }
 
-function loadPageScript() {
+function loadPageScript(options = {}) {
   const htmlPath = path.join(__dirname, "..", "docs", "index.html");
   const html = fs.readFileSync(htmlPath, "utf8");
   const match = html.match(/<script>\s*([\s\S]*?)\s*<\/script>\s*<\/body>/);
@@ -60,6 +71,9 @@ function loadPageScript() {
   const formatButtons = ["sub2api", "cpa", "cockpit", "9router", "codex", "axonhub", "codexmanager"].map((format) =>
     createFakeElement(`[data-format="${format}"]`, { dataset: { format } })
   );
+
+  const sessionStorageData = {};
+  const confirmImpl = options.confirmImpl || (() => true);
 
   const document = {
     body: createFakeElement("body"),
@@ -81,6 +95,12 @@ function loadPageScript() {
   };
 
   const context = {
+    Blob: class Blob {
+      constructor(parts, options) {
+        this.parts = parts;
+        this.options = options;
+      }
+    },
     TextDecoder,
     TextEncoder,
     URL: {
@@ -99,12 +119,31 @@ function loadPageScript() {
         async writeText() {},
       },
     },
+    sessionStorage: {
+      getItem(key) {
+        return Object.prototype.hasOwnProperty.call(sessionStorageData, key) ? sessionStorageData[key] : null;
+      },
+      setItem(key, value) {
+        sessionStorageData[key] = String(value);
+      },
+      removeItem(key) {
+        delete sessionStorageData[key];
+      },
+      clear() {
+        for (const key of Object.keys(sessionStorageData)) {
+          delete sessionStorageData[key];
+        }
+      },
+    },
     setTimeout,
+    window: {
+      confirm: confirmImpl,
+    },
   };
 
   vm.runInNewContext(match[1], context, { filename: "docs/index.html" });
 
-  return { elements, formatButtons };
+  return { elements, formatButtons, html, sessionStorageData };
 }
 
 function dispatch(element, type) {
@@ -438,14 +477,315 @@ function testCodexManagerAuthJsonPreservesRealRefreshAndMetadata() {
   assert.equal(authJson.meta.chatgpt_account_id, "chatgpt-account-1");
 }
 
-testSub2apiAccountUsesAccessTokenExpiry();
-testSub2apiAccountsUseTheirOwnAccessTokenExpiry();
-testSub2apiAccountWithRefreshTokenOmitsAccessTokenExpiry();
-testSyntheticIdTokenHasCodexParseableJwtFormat();
-testAxonHubAuthJsonUsesPlaceholderRefreshTokenWhenMissing();
-testAxonHubAuthJsonPreservesRealRefreshToken();
-testCodexAuthJsonMatchesNativeShapeWhenMissingRefreshToken();
-testCodexAuthJsonPreservesRealRefreshTokenAndIdToken();
-testCodexManagerAuthJsonUsesEmptyRefreshTokenWhenMissing();
-testCodexManagerAuthJsonPreservesRealRefreshAndMetadata();
-console.log("convert-session tests passed");
+function createJsonFile(name, content) {
+  return {
+    name,
+    webkitRelativePath: name,
+    async text() {
+      return content;
+    },
+  };
+}
+
+function waitForMicrotasks() {
+  return new Promise((resolve) => setImmediate(resolve));
+}
+
+async function testDragDropReadsJsonFile() {
+  const { elements } = loadPageScript();
+  const dropZone = elements.get("#drop-zone");
+  const output = elements.get("#output");
+
+  assert.equal(typeof dropZone.listeners.drop, "function", "drop-zone must handle file drops");
+
+  dropZone.listeners.drop({
+    preventDefault() {},
+    currentTarget: dropZone,
+    dataTransfer: {
+      files: [
+        createJsonFile("session.json", JSON.stringify({
+          user: { email: "drop@example.com" },
+          accessToken: jwtWithPayload({
+            exp: 1780473960,
+            "https://api.openai.com/auth": { chatgpt_account_id: "drop-account" },
+          }),
+        })),
+      ],
+    },
+  });
+
+  await waitForMicrotasks();
+
+  const document = JSON.parse(output.value);
+  assert.equal(document.accounts.length, 1);
+  assert.equal(document.accounts[0].credentials.email, "drop@example.com");
+}
+
+function testSensitiveConsentRejectsPaste() {
+  const { elements } = loadPageScript({ confirmImpl: () => false });
+  const input = elements.get("#session-input");
+  const output = elements.get("#output");
+
+  input.value = "";
+  dispatch(input, "input");
+
+  input.value = JSON.stringify({
+    user: { email: "secret@example.com" },
+    accessToken: "super-secret-access-token-value",
+  });
+  dispatch(input, "input");
+
+  assert.equal(input.value, "");
+  assert.equal(output.value, "");
+}
+
+function testSyntheticWarningsVisibleForCpaOutput() {
+  const { elements, formatButtons } = loadPageScript();
+  const cpaButton = formatButtons.find((button) => button.dataset.format === "cpa");
+  const input = elements.get("#session-input");
+  const warnings = elements.get("#synthetic-warnings");
+
+  dispatch(cpaButton, "click");
+  input.value = JSON.stringify({
+    user: { email: "mark@example.com" },
+    account: { id: "00000000-0000-4000-9000-000000000000", planType: "plus" },
+    accessToken: "access-token-value",
+    sessionToken: "session-token-value",
+  });
+  dispatch(input, "input");
+
+  assert.ok(warnings.classList.contains("is-visible"));
+  assert.match(warnings.innerHTML, /合成 id_token/);
+}
+
+function testClearInputHighlightsAfterConversion() {
+  const { elements } = loadPageScript();
+  const input = elements.get("#session-input");
+  const clearButton = elements.get("#clear-input");
+
+  input.value = JSON.stringify({
+    user: { email: "mark@example.com" },
+    accessToken: jwtWithPayload({
+      exp: 1780473960,
+      "https://api.openai.com/auth": { chatgpt_account_id: "chatgpt-account-1" },
+    }),
+  });
+  dispatch(input, "input");
+
+  assert.ok(clearButton.classList.contains("button-warning"));
+}
+
+async function testDragDropRejectsNonJsonFile() {
+  const { elements } = loadPageScript();
+  const dropZone = elements.get("#drop-zone");
+  const inputStatus = elements.get("#input-status");
+
+  dropZone.listeners.drop({
+    preventDefault() {},
+    currentTarget: dropZone,
+    dataTransfer: {
+      files: [createJsonFile("notes.txt", "not json")],
+    },
+  });
+
+  await waitForMicrotasks();
+  assert.match(inputStatus.textContent, /没有选择 JSON 文件/);
+}
+
+async function testDragDropInvalidSessionShowsError() {
+  const { elements } = loadPageScript();
+  const dropZone = elements.get("#drop-zone");
+  const inputStatus = elements.get("#input-status");
+  const output = elements.get("#output");
+
+  dropZone.listeners.drop({
+    preventDefault() {},
+    currentTarget: dropZone,
+    dataTransfer: {
+      files: [createJsonFile("empty.json", JSON.stringify({ hello: "world" }))],
+    },
+  });
+
+  await waitForMicrotasks();
+  assert.equal(output.value, "");
+  assert.match(inputStatus.textContent, /生成 0 个账号|没有可转换账号/);
+}
+
+function testDragOverAddsVisualClass() {
+  const { elements } = loadPageScript();
+  const dropZone = elements.get("#drop-zone");
+
+  dropZone.listeners.dragover({
+    preventDefault() {},
+    currentTarget: dropZone,
+  });
+  assert.ok(dropZone.classList.contains("is-dragover"));
+
+  dropZone.listeners.drop({
+    preventDefault() {},
+    currentTarget: dropZone,
+    relatedTarget: null,
+    dataTransfer: { files: [] },
+  });
+  assert.equal(dropZone.classList.contains("is-dragover"), false);
+}
+
+function testAxonHubSyntheticWarningsVisible() {
+  const { elements, formatButtons } = loadPageScript();
+  const axonHubButton = formatButtons.find((button) => button.dataset.format === "axonhub");
+  const input = elements.get("#session-input");
+  const warnings = elements.get("#synthetic-warnings");
+
+  dispatch(axonHubButton, "click");
+  input.value = JSON.stringify({
+    user: { email: "mark@example.com" },
+    account: { id: "00000000-0000-4000-9000-000000000000", planType: "plus" },
+    accessToken: "access-token-value",
+    sessionToken: "session-token-value",
+  });
+  dispatch(input, "input");
+
+  assert.ok(warnings.classList.contains("is-visible"));
+  assert.match(warnings.innerHTML, /refresh_token 占位值/);
+}
+
+async function testCopyOutputShowsCustodyWarning() {
+  const { elements } = loadPageScript();
+  const input = elements.get("#session-input");
+  const outputStatus = elements.get("#output-status");
+  const copyButton = elements.get("#copy-output");
+
+  input.value = JSON.stringify({
+    user: { email: "mark@example.com" },
+    accessToken: jwtWithPayload({
+      exp: 1780473960,
+      "https://api.openai.com/auth": { chatgpt_account_id: "chatgpt-account-1" },
+    }),
+  });
+  dispatch(input, "input");
+
+  await copyButton.listeners.click();
+  await waitForMicrotasks();
+
+  assert.match(outputStatus.textContent, /妥善保管/);
+}
+
+function testDownloadOutputShowsCustodyWarning() {
+  const { elements } = loadPageScript();
+  const input = elements.get("#session-input");
+  const outputStatus = elements.get("#output-status");
+  const downloadButton = elements.get("#download-output");
+
+  input.value = JSON.stringify({
+    user: { email: "mark@example.com" },
+    accessToken: jwtWithPayload({
+      exp: 1780473960,
+      "https://api.openai.com/auth": { chatgpt_account_id: "chatgpt-account-1" },
+    }),
+  });
+  dispatch(input, "input");
+  downloadButton.listeners.click();
+
+  assert.match(outputStatus.textContent, /妥善保管/);
+}
+
+function testOutputStatusSuggestsClearInput() {
+  const { elements } = loadPageScript();
+  const input = elements.get("#session-input");
+  const outputStatus = elements.get("#output-status");
+
+  input.value = JSON.stringify({
+    user: { email: "mark@example.com" },
+    accessToken: jwtWithPayload({
+      exp: 1780473960,
+      "https://api.openai.com/auth": { chatgpt_account_id: "chatgpt-account-1" },
+    }),
+  });
+  dispatch(input, "input");
+
+  assert.match(outputStatus.textContent, /建议立即清空输入/);
+}
+
+function testExampleSessionSkipsSensitiveConfirm() {
+  let confirmCalls = 0;
+  const { elements } = loadPageScript({
+    confirmImpl: () => {
+      confirmCalls += 1;
+      return true;
+    },
+  });
+  const input = elements.get("#session-input");
+
+  dispatch(elements.get("#load-example"), "click");
+  assert.ok(input.value.includes("paste-real-access-token-here"));
+  assert.equal(confirmCalls, 0);
+}
+
+function testAllSevenFormatsProduceOutput() {
+  const { elements, formatButtons } = loadPageScript();
+  const input = elements.get("#session-input");
+  const output = elements.get("#output");
+
+  input.value = JSON.stringify({
+    user: { email: "mark@example.com" },
+    account: { id: "00000000-0000-4000-9000-000000000000", planType: "plus" },
+    accessToken: jwtWithPayload({
+      exp: 1780473960,
+      "https://api.openai.com/auth": { chatgpt_account_id: "chatgpt-account-1" },
+    }),
+    refreshToken: "real-refresh-token",
+    idToken: "real.header.signature",
+  });
+  dispatch(input, "input");
+
+  for (const button of formatButtons) {
+    dispatch(button, "click");
+    assert.ok(output.value.length > 0, `expected output for format ${button.dataset.format}`);
+    JSON.parse(output.value);
+  }
+}
+
+function testBuildMetadataEmbeddedInHtml() {
+  const { html } = loadPageScript();
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "package.json"), "utf8"));
+
+  assert.match(html, new RegExp(`content="v${pkg.version}"`));
+  assert.match(html, /content="\d{4}-\d{2}-\d{2}"/);
+  assert.match(html, /name="build-sha256" content="[a-f0-9]{12}"/);
+  assert.match(html, /name="build-sha256-full" content="[a-f0-9]{64}"/);
+  assert.match(html, /connect-src 'none'/);
+  assert.doesNotMatch(html, /discord-card/);
+}
+
+async function runTests() {
+  testSub2apiAccountUsesAccessTokenExpiry();
+  testSub2apiAccountsUseTheirOwnAccessTokenExpiry();
+  testSub2apiAccountWithRefreshTokenOmitsAccessTokenExpiry();
+  testSyntheticIdTokenHasCodexParseableJwtFormat();
+  testAxonHubAuthJsonUsesPlaceholderRefreshTokenWhenMissing();
+  testAxonHubAuthJsonPreservesRealRefreshToken();
+  testCodexAuthJsonMatchesNativeShapeWhenMissingRefreshToken();
+  testCodexAuthJsonPreservesRealRefreshTokenAndIdToken();
+  testCodexManagerAuthJsonUsesEmptyRefreshTokenWhenMissing();
+  testCodexManagerAuthJsonPreservesRealRefreshAndMetadata();
+  await testDragDropReadsJsonFile();
+  await testDragDropRejectsNonJsonFile();
+  await testDragDropInvalidSessionShowsError();
+  testDragOverAddsVisualClass();
+  testSensitiveConsentRejectsPaste();
+  testSyntheticWarningsVisibleForCpaOutput();
+  testAxonHubSyntheticWarningsVisible();
+  testClearInputHighlightsAfterConversion();
+  testOutputStatusSuggestsClearInput();
+  testExampleSessionSkipsSensitiveConfirm();
+  await testCopyOutputShowsCustodyWarning();
+  testDownloadOutputShowsCustodyWarning();
+  testAllSevenFormatsProduceOutput();
+  testBuildMetadataEmbeddedInHtml();
+  console.log("convert-session tests passed");
+}
+
+runTests().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

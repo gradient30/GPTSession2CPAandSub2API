@@ -1,0 +1,17 @@
+{
+  "name": "gpt-session-converter",
+  "version": "1.1.0",
+  "private": true,
+  "description": "Local ChatGPT session JSON converter for CPA, sub2api, Cockpit, and related tools.",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "pretest": "npm run build",
+    "test": "node tests/convert-session.test.js",
+    "verify": "npm run build && node scripts/verify-dist.js",
+    "acceptance": "node scripts/acceptance.js",
+    "prepublishOnly": "npm run build && npm run verify"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
