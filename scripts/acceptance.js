@@ -63,8 +63,8 @@ const PLAN_CHECKS = [
   {
     phase: "Phase 1",
     id: "P1-03",
-    item: "CSP 含 connect-src 'none'",
-    verify: () => fs.readFileSync(path.join(ROOT, "docs", "index.html"), "utf8").includes("connect-src 'none'"),
+    item: "CSP 仅允许 connect-src https://chatgpt.com",
+    verify: () => fs.readFileSync(path.join(ROOT, "docs", "index.html"), "utf8").includes("connect-src https://chatgpt.com"),
   },
   {
     phase: "Phase 1",

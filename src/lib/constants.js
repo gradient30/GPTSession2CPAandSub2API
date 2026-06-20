@@ -18,6 +18,12 @@ const AXONHUB_PLACEHOLDER_NOTE = "refresh_token 为占位值；access_token 过�
 
 const AXONHUB_PLACEHOLDER_REFRESH_TOKEN = "__missing_refresh_token__";
 const SENSITIVE_SKIP_KEY = "gpt-session-converter-sensitive-skip";
+const CHATGPT_SESSION_URL = "https://chatgpt.com/api/auth/session";
+const SESSION_FETCH_TIMEOUT_MS = 20000;
+const SESSION_FETCH_MIN_WAIT_MS = 3500;
+const SESSION_FALLBACK_OPEN_DELAY_MS = 800;
+const SESSION_FETCH_RETRY_COUNT = 2;
+const SESSION_FETCH_RETRY_DELAY_MS = 1500;
 
 function formatSourceLabel(sourceName) {
   if (typeof sourceName !== "string" || sourceName.trim() === "") {

@@ -753,7 +753,7 @@ function testBuildMetadataEmbeddedInHtml() {
   assert.match(html, /content="\d{4}-\d{2}-\d{2}"/);
   assert.match(html, /name="build-sha256" content="[a-f0-9]{12}"/);
   assert.match(html, /name="build-sha256-full" content="[a-f0-9]{64}"/);
-  assert.match(html, /connect-src 'none'/);
+  assert.match(html, /connect-src https:\/\/chatgpt\.com/);
   assert.doesNotMatch(html, /discord-card/);
 }
 

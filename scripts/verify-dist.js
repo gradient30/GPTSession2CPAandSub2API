@@ -45,7 +45,7 @@ function main() {
     ["doctype declaration", html.startsWith("<!DOCTYPE html>")],
     ["build version meta", html.includes(`content="v${pkg.version}"`)],
     ["CSP meta", html.includes("Content-Security-Policy")],
-    ["connect-src none", html.includes("connect-src 'none'")],
+    ["connect-src chatgpt only", html.includes("connect-src https://chatgpt.com")],
     ["build sha256 meta", /name="build-sha256" content="[a-f0-9]{12}"/.test(html)],
     ["no pending sha placeholder", !html.includes("pending-build")],
     ["drag-drop handler", html.includes("dragover") && html.includes("readFiles(event.dataTransfer.files)")],

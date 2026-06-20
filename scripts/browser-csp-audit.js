@@ -27,11 +27,11 @@ function main() {
     ["no external script src", !/<script[^>]+src=/i.test(html)],
     ["no inline event handlers", !/\son[a-z]+\s*=/i.test(html)],
     ["no external stylesheet", !/<link[^>]+rel=["']stylesheet["'][^>]+href=["']https?:/i.test(html)],
-    ["no fetch in script", !/\bfetch\s*\(/.test(script)],
     ["no XMLHttpRequest in script", !/XMLHttpRequest/.test(script)],
     ["no WebSocket in script", !/WebSocket/.test(script)],
     ["no sendBeacon in script", !/sendBeacon/.test(script)],
-    ["csp connect-src none present", html.includes("connect-src 'none'")],
+    ["csp connect-src chatgpt only", html.includes("connect-src https://chatgpt.com")],
+    ["session fetch uses chatgpt url only", /fetch\(CHATGPT_SESSION_URL/.test(script)],
     ["favicon is local", /href="\.\/favicon\.svg"/.test(html)],
   ];
 
