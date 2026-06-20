@@ -213,7 +213,7 @@ function convertSession(record, options = {}) {
   const expiresIn = getExpiresIn(expiresAt, options.now || new Date());
   const sourceName = firstNonEmpty(options.sourceName, "pasted-json");
   const sourceType = record.provider === "codex" && record.authType === "oauth" ? "9router" : "chatgpt_web_session";
-  const name = firstNonEmpty(email, sourceName, "ChatGPT Account");
+  const name = firstNonEmpty(email, formatSourceLabel(sourceName), DEFAULT_ACCOUNT_NAME);
   const syntheticIdToken = !inputIdToken
     ? buildSyntheticCodexIdToken(email, accountId, planType, userId, expiresAt)
     : undefined;
@@ -250,7 +250,7 @@ function convertSession(record, options = {}) {
   };
 
   const sub2apiAccount = stripUnavailable({
-    name: firstNonEmpty(name, email, sourceName, "ChatGPT Account"),
+    name: firstNonEmpty(name, email, formatSourceLabel(sourceName), DEFAULT_ACCOUNT_NAME),
     platform: "openai",
     type: "oauth",
     expires_at: accessTokenExpiresAt,
@@ -320,17 +320,17 @@ function convertSession(record, options = {}) {
       id_token: idToken,
     },
     axonhub_refresh_token_placeholder: refreshToken ? undefined : true,
-    axonhub_note: refreshToken ? undefined : "refresh_token is a placeholder; access_token works only until it expires.",
+    axonhub_note: refreshToken ? undefined : AXONHUB_PLACEHOLDER_NOTE,
   });
   const codexManagerTokenHints = Object.fromEntries(Object.entries({
     account_id: accountId,
     chatgpt_account_id: chatgptAccountId,
   }).filter(([, value]) => value !== undefined && value !== null && value !== ""));
   const codexManagerMeta = Object.fromEntries(Object.entries({
-    label: firstNonEmpty(name, email, sourceName, "ChatGPT Account"),
+    label: firstNonEmpty(name, email, formatSourceLabel(sourceName), DEFAULT_ACCOUNT_NAME),
     workspace_id: workspaceId,
     chatgpt_account_id: chatgptAccountId,
-    note: "Imported from ChatGPT session",
+    note: CODEX_MANAGER_IMPORT_NOTE,
   }).filter(([, value]) => value !== undefined && value !== null && value !== ""));
   const codexManager = {
     tokens: {

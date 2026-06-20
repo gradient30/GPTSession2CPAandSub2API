@@ -321,7 +321,7 @@ function testAxonHubAuthJsonUsesPlaceholderRefreshTokenWhenMissing() {
   assert.equal(authJson.tokens.id_token.split(".").length, 3);
   assert.equal(authJson.last_refresh, "2026-08-06T13:29:36.155Z");
   assert.equal(authJson.axonhub_refresh_token_placeholder, true);
-  assert.equal(authJson.axonhub_note, "refresh_token is a placeholder; access_token works only until it expires.");
+  assert.equal(authJson.axonhub_note, "refresh_token 为占位值；access_token 过期前可用，过期后无法自动刷新。");
 }
 
 function testAxonHubAuthJsonPreservesRealRefreshToken() {
@@ -446,7 +446,7 @@ function testCodexManagerAuthJsonUsesEmptyRefreshTokenWhenMissing() {
   assert.equal(authJson.tokens.id_token, "");
   assert.equal(authJson.tokens.account_id, "00000000-0000-4000-9000-000000000000");
   assert.equal(authJson.meta.label, "mark@example.com");
-  assert.equal(authJson.meta.note, "Imported from ChatGPT session");
+  assert.equal(authJson.meta.note, "从 ChatGPT 会话导入");
 }
 
 function testCodexManagerAuthJsonPreservesRealRefreshAndMetadata() {

@@ -8,8 +8,24 @@ const OUTPUT_LABELS = {
   codexmanager: "Codex-Manager",
 };
 
+const SOURCE_LABELS = {
+  "pasted-json": "粘贴 JSON",
+};
+
+const DEFAULT_ACCOUNT_NAME = "ChatGPT 账号";
+const CODEX_MANAGER_IMPORT_NOTE = "从 ChatGPT 会话导入";
+const AXONHUB_PLACEHOLDER_NOTE = "refresh_token 为占位值；access_token 过期前可用，过期后无法自动刷新。";
+
 const AXONHUB_PLACEHOLDER_REFRESH_TOKEN = "__missing_refresh_token__";
 const SENSITIVE_SKIP_KEY = "gpt-session-converter-sensitive-skip";
+
+function formatSourceLabel(sourceName) {
+  if (typeof sourceName !== "string" || sourceName.trim() === "") {
+    return SOURCE_LABELS["pasted-json"];
+  }
+
+  return SOURCE_LABELS[sourceName] || sourceName;
+}
 
 const exampleSession = {
   user: {

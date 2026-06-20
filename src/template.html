@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ChatGPT Session -> CPA / sub2api / Cockpit / Codex / AxonHub / Codex-Manager</title>
+    <title>ChatGPT 会话转换 · CPA / sub2api / Cockpit / Codex / AxonHub / Codex-Manager</title>
     <meta name="theme-color" content="#24505a" />
     <meta
       http-equiv="Content-Security-Policy"
@@ -87,8 +87,7 @@
         color: var(--accent);
         font-size: 0.78rem;
         font-weight: 800;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
+        letter-spacing: 0.06em;
       }
 
       h1 {
@@ -616,8 +615,8 @@
     <main class="app">
       <header class="topbar">
         <div class="title-block">
-          <p class="eyebrow">Local JSON Converter</p>
-          <h1>ChatGPT Session Converter</h1>
+          <p class="eyebrow">本地 JSON 转换器</p>
+          <h1>ChatGPT 会话格式转换</h1>
           <div class="title-targets" aria-label="支持输出格式">
             <span>CPA</span>
             <span>sub2api</span>
@@ -668,20 +667,20 @@
         <section class="panel" aria-labelledby="input-title">
           <div class="panel-head">
             <div>
-              <h2 id="input-title">Session JSON</h2>
-              <p>粘贴 ChatGPT Web session，或拖入一个或多个 JSON 文件。</p>
+              <h2 id="input-title">会话 JSON</h2>
+              <p>粘贴 ChatGPT Web 会话 JSON，或拖入一个或多个 JSON 文件。</p>
             </div>
           </div>
           <div class="panel-body">
             <div class="session-guide">
-              <strong>Session 数据从这里获取</strong>
+              <strong>会话数据获取方式</strong>
               <p>
                 先在浏览器登录 ChatGPT，然后打开
                 <a href="https://chatgpt.com/api/auth/session" target="_blank" rel="noreferrer">https://chatgpt.com/api/auth/session</a>
                 ，复制页面显示的整段 JSON，粘贴到下方输入框。
               </p>
-              <p class="session-warning">OpenAI 已限制通过 Web session 转换导入来跳过 Codex OAuth add phone / 手机绑定验证；本页面仅用于格式转换。</p>
-              <p class="session-warning">这段 JSON 包含 accessToken 和 sessionToken，等同敏感登录凭证，不要发给别人。处理真实 token 时建议本地打开本页面，勿使用不可信的在线镜像。</p>
+              <p class="session-warning">OpenAI 已限制通过 Web 会话转换导入来跳过 Codex OAuth 添加手机号 / 手机绑定验证；本页面仅用于格式转换。</p>
+              <p class="session-warning">这段 JSON 包含 accessToken 和 sessionToken，属于敏感登录凭证，请勿发送给他人。处理真实 token 时建议本地打开本页面，勿使用不可信的在线镜像。</p>
             </div>
             <input class="hidden" id="file-input" type="file" accept=".json,application/json" multiple />
             <div class="input-actions">
@@ -710,7 +709,7 @@
           </div>
           <div class="panel-body">
             <p class="notice" id="cpa-notice">
-              本页面仅做格式转换，不能绕过 Codex OAuth add phone / 手机绑定验证。ChatGPT Web session 一般没有 `refresh_token`；缺少真实 `id_token` 时 CPA、Cockpit、Codex 和 AxonHub 会构造 Codex 可解析的占位 JWT claims（含 `id_token_synthetic` 标记）。Codex 和 Codex-Manager 会保留空 `refresh_token`；AxonHub 缺少真实 `refresh_token` 时会写入占位值。
+              本页面仅做格式转换，不能绕过 Codex OAuth 添加手机号 / 手机绑定验证。ChatGPT Web 会话通常不含 `refresh_token`；缺少真实 `id_token` 时，CPA、Cockpit、Codex 和 AxonHub 会构造 Codex 可解析的占位 JWT claims（含 `id_token_synthetic` 标记）。Codex 和 Codex-Manager 会保留空 `refresh_token`；AxonHub 缺少真实 `refresh_token` 时会写入占位值。
             </p>
             <div class="synthetic-warnings" id="synthetic-warnings" aria-live="polite"></div>
             <div class="summary" aria-label="转换统计">

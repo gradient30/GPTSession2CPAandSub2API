@@ -83,7 +83,7 @@ function renderAccounts() {
       <td><div class="cell-clip" title="${escapeHtml(item.name)}">${escapeHtml(item.name || "-")}</div></td>
       <td><div class="cell-clip" title="${escapeHtml(item.email)}">${escapeHtml(item.email || "-")}</div></td>
       <td><div class="cell-clip" title="${escapeHtml(item.expiresAt)}">${escapeHtml(formatDisplayDate(item.expiresAt) || "-")}</div></td>
-      <td><div class="cell-clip" title="${escapeHtml(item.sourceName)}">${escapeHtml(item.sourceName || "pasted-json")}</div></td>
+      <td><div class="cell-clip" title="${escapeHtml(formatSourceLabel(item.sourceName))}">${escapeHtml(formatSourceLabel(item.sourceName))}</div></td>
     </tr>
   `).join("");
 }
@@ -97,7 +97,7 @@ function renderIssues() {
 
   elements.issues.classList.add("is-visible");
   elements.issues.innerHTML = state.skipped
-    .map((item) => `<div>${escapeHtml(item.sourceName || "input")} ${escapeHtml(item.path || "")}: ${escapeHtml(item.reason)}</div>`)
+    .map((item) => `<div>${escapeHtml(formatSourceLabel(item.sourceName) || "输入")} ${escapeHtml(item.path || "")}：${escapeHtml(item.reason)}</div>`)
     .join("");
 }
 

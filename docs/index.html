@@ -3,16 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ChatGPT Session -> CPA / sub2api / Cockpit / Codex / AxonHub / Codex-Manager</title>
+    <title>ChatGPT 会话转换 · CPA / sub2api / Cockpit / Codex / AxonHub / Codex-Manager</title>
     <meta name="theme-color" content="#24505a" />
     <meta
       http-equiv="Content-Security-Policy"
       content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none';"
     />
     <meta name="build-version" content="v1.1.0" />
-    <meta name="build-date" content="2026-06-18" />
-    <meta name="build-sha256" content="600c659fc6af" />
-    <meta name="build-sha256-full" content="600c659fc6af8ff7cab99ef818d9e6426d62485d843378b6b265a14c1b6e7c06" />
+    <meta name="build-date" content="2026-06-20" />
+    <meta name="build-sha256" content="3bd0e221fb4a" />
+    <meta name="build-sha256-full" content="3bd0e221fb4a723e973e2d287ac9dd39593ba9c2d415fabfe3ce3f198f4ee93d" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" sizes="any" />
     <style>
       :root {
@@ -87,8 +87,7 @@
         color: var(--accent);
         font-size: 0.78rem;
         font-weight: 800;
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
+        letter-spacing: 0.06em;
       }
 
       h1 {
@@ -616,8 +615,8 @@
     <main class="app">
       <header class="topbar">
         <div class="title-block">
-          <p class="eyebrow">Local JSON Converter</p>
-          <h1>ChatGPT Session Converter</h1>
+          <p class="eyebrow">本地 JSON 转换器</p>
+          <h1>ChatGPT 会话格式转换</h1>
           <div class="title-targets" aria-label="支持输出格式">
             <span>CPA</span>
             <span>sub2api</span>
@@ -632,7 +631,7 @@
           <span class="meta-chip">浏览器本地解析</span>
           <span class="meta-chip">不上传 token</span>
           <span class="meta-chip">不写入存储</span>
-          <span class="meta-chip" title="内联脚本 SHA256（完整值见页面 meta build-sha256-full）">v1.1.0 · 2026-06-18 · SHA256 600c659fc6af</span>
+          <span class="meta-chip" title="内联脚本 SHA256（完整值见页面 meta build-sha256-full）">v1.1.0 · 2026-06-20 · SHA256 3bd0e221fb4a</span>
           <a
             class="meta-chip github-link"
             href="https://github.com/gtxx3600/GPTSession2CPAandSub2API"
@@ -668,20 +667,20 @@
         <section class="panel" aria-labelledby="input-title">
           <div class="panel-head">
             <div>
-              <h2 id="input-title">Session JSON</h2>
-              <p>粘贴 ChatGPT Web session，或拖入一个或多个 JSON 文件。</p>
+              <h2 id="input-title">会话 JSON</h2>
+              <p>粘贴 ChatGPT Web 会话 JSON，或拖入一个或多个 JSON 文件。</p>
             </div>
           </div>
           <div class="panel-body">
             <div class="session-guide">
-              <strong>Session 数据从这里获取</strong>
+              <strong>会话数据获取方式</strong>
               <p>
                 先在浏览器登录 ChatGPT，然后打开
                 <a href="https://chatgpt.com/api/auth/session" target="_blank" rel="noreferrer">https://chatgpt.com/api/auth/session</a>
                 ，复制页面显示的整段 JSON，粘贴到下方输入框。
               </p>
-              <p class="session-warning">OpenAI 已限制通过 Web session 转换导入来跳过 Codex OAuth add phone / 手机绑定验证；本页面仅用于格式转换。</p>
-              <p class="session-warning">这段 JSON 包含 accessToken 和 sessionToken，等同敏感登录凭证，不要发给别人。处理真实 token 时建议本地打开本页面，勿使用不可信的在线镜像。</p>
+              <p class="session-warning">OpenAI 已限制通过 Web 会话转换导入来跳过 Codex OAuth 添加手机号 / 手机绑定验证；本页面仅用于格式转换。</p>
+              <p class="session-warning">这段 JSON 包含 accessToken 和 sessionToken，属于敏感登录凭证，请勿发送给他人。处理真实 token 时建议本地打开本页面，勿使用不可信的在线镜像。</p>
             </div>
             <input class="hidden" id="file-input" type="file" accept=".json,application/json" multiple />
             <div class="input-actions">
@@ -710,7 +709,7 @@
           </div>
           <div class="panel-body">
             <p class="notice" id="cpa-notice">
-              本页面仅做格式转换，不能绕过 Codex OAuth add phone / 手机绑定验证。ChatGPT Web session 一般没有 `refresh_token`；缺少真实 `id_token` 时 CPA、Cockpit、Codex 和 AxonHub 会构造 Codex 可解析的占位 JWT claims（含 `id_token_synthetic` 标记）。Codex 和 Codex-Manager 会保留空 `refresh_token`；AxonHub 缺少真实 `refresh_token` 时会写入占位值。
+              本页面仅做格式转换，不能绕过 Codex OAuth 添加手机号 / 手机绑定验证。ChatGPT Web 会话通常不含 `refresh_token`；缺少真实 `id_token` 时，CPA、Cockpit、Codex 和 AxonHub 会构造 Codex 可解析的占位 JWT claims（含 `id_token_synthetic` 标记）。Codex 和 Codex-Manager 会保留空 `refresh_token`；AxonHub 缺少真实 `refresh_token` 时会写入占位值。
             </p>
             <div class="synthetic-warnings" id="synthetic-warnings" aria-live="polite"></div>
             <div class="summary" aria-label="转换统计">
@@ -759,7 +758,7 @@
 
       <footer class="page-footer">
         <p>
-          构建信息：v1.1.0 · 2026-06-18 · 内联脚本 SHA256 前 12 位 600c659fc6af。
+          构建信息：v1.1.0 · 2026-06-20 · 内联脚本 SHA256 前 12 位 3bd0e221fb4a。
           完整校验值见 <code>&lt;meta name="build-sha256-full"&gt;</code>。
           社区讨论见 <a href="https://github.com/gtxx3600/GPTSession2CPAandSub2API#社区">README 社区章节</a>。
           安全说明见仓库 <code>SECURITY.md</code>。
@@ -779,8 +778,24 @@ const OUTPUT_LABELS = {
   codexmanager: "Codex-Manager",
 };
 
+const SOURCE_LABELS = {
+  "pasted-json": "粘贴 JSON",
+};
+
+const DEFAULT_ACCOUNT_NAME = "ChatGPT 账号";
+const CODEX_MANAGER_IMPORT_NOTE = "从 ChatGPT 会话导入";
+const AXONHUB_PLACEHOLDER_NOTE = "refresh_token 为占位值；access_token 过期前可用，过期后无法自动刷新。";
+
 const AXONHUB_PLACEHOLDER_REFRESH_TOKEN = "__missing_refresh_token__";
 const SENSITIVE_SKIP_KEY = "gpt-session-converter-sensitive-skip";
+
+function formatSourceLabel(sourceName) {
+  if (typeof sourceName !== "string" || sourceName.trim() === "") {
+    return SOURCE_LABELS["pasted-json"];
+  }
+
+  return SOURCE_LABELS[sourceName] || sourceName;
+}
 
 const exampleSession = {
   user: {
@@ -1264,7 +1279,7 @@ function convertSession(record, options = {}) {
   const expiresIn = getExpiresIn(expiresAt, options.now || new Date());
   const sourceName = firstNonEmpty(options.sourceName, "pasted-json");
   const sourceType = record.provider === "codex" && record.authType === "oauth" ? "9router" : "chatgpt_web_session";
-  const name = firstNonEmpty(email, sourceName, "ChatGPT Account");
+  const name = firstNonEmpty(email, formatSourceLabel(sourceName), DEFAULT_ACCOUNT_NAME);
   const syntheticIdToken = !inputIdToken
     ? buildSyntheticCodexIdToken(email, accountId, planType, userId, expiresAt)
     : undefined;
@@ -1301,7 +1316,7 @@ function convertSession(record, options = {}) {
   };
 
   const sub2apiAccount = stripUnavailable({
-    name: firstNonEmpty(name, email, sourceName, "ChatGPT Account"),
+    name: firstNonEmpty(name, email, formatSourceLabel(sourceName), DEFAULT_ACCOUNT_NAME),
     platform: "openai",
     type: "oauth",
     expires_at: accessTokenExpiresAt,
@@ -1371,17 +1386,17 @@ function convertSession(record, options = {}) {
       id_token: idToken,
     },
     axonhub_refresh_token_placeholder: refreshToken ? undefined : true,
-    axonhub_note: refreshToken ? undefined : "refresh_token is a placeholder; access_token works only until it expires.",
+    axonhub_note: refreshToken ? undefined : AXONHUB_PLACEHOLDER_NOTE,
   });
   const codexManagerTokenHints = Object.fromEntries(Object.entries({
     account_id: accountId,
     chatgpt_account_id: chatgptAccountId,
   }).filter(([, value]) => value !== undefined && value !== null && value !== ""));
   const codexManagerMeta = Object.fromEntries(Object.entries({
-    label: firstNonEmpty(name, email, sourceName, "ChatGPT Account"),
+    label: firstNonEmpty(name, email, formatSourceLabel(sourceName), DEFAULT_ACCOUNT_NAME),
     workspace_id: workspaceId,
     chatgpt_account_id: chatgptAccountId,
-    note: "Imported from ChatGPT session",
+    note: CODEX_MANAGER_IMPORT_NOTE,
   }).filter(([, value]) => value !== undefined && value !== null && value !== ""));
   const codexManager = {
     tokens: {
@@ -1639,7 +1654,7 @@ function renderAccounts() {
       <td><div class="cell-clip" title="${escapeHtml(item.name)}">${escapeHtml(item.name || "-")}</div></td>
       <td><div class="cell-clip" title="${escapeHtml(item.email)}">${escapeHtml(item.email || "-")}</div></td>
       <td><div class="cell-clip" title="${escapeHtml(item.expiresAt)}">${escapeHtml(formatDisplayDate(item.expiresAt) || "-")}</div></td>
-      <td><div class="cell-clip" title="${escapeHtml(item.sourceName)}">${escapeHtml(item.sourceName || "pasted-json")}</div></td>
+      <td><div class="cell-clip" title="${escapeHtml(formatSourceLabel(item.sourceName))}">${escapeHtml(formatSourceLabel(item.sourceName))}</div></td>
     </tr>
   `).join("");
 }
@@ -1653,7 +1668,7 @@ function renderIssues() {
 
   elements.issues.classList.add("is-visible");
   elements.issues.innerHTML = state.skipped
-    .map((item) => `<div>${escapeHtml(item.sourceName || "input")} ${escapeHtml(item.path || "")}: ${escapeHtml(item.reason)}</div>`)
+    .map((item) => `<div>${escapeHtml(formatSourceLabel(item.sourceName) || "输入")} ${escapeHtml(item.path || "")}：${escapeHtml(item.reason)}</div>`)
     .join("");
 }
 
