@@ -63,8 +63,8 @@ const PLAN_CHECKS = [
   {
     phase: "Phase 1",
     id: "P1-03",
-    item: "CSP 仅允许 connect-src https://chatgpt.com",
-    verify: () => fs.readFileSync(path.join(ROOT, "docs", "index.html"), "utf8").includes("connect-src https://chatgpt.com"),
+    item: "CSP 禁止 connect-src（无网络请求）",
+    verify: () => fs.readFileSync(path.join(ROOT, "docs", "index.html"), "utf8").includes("connect-src 'none'"),
   },
   {
     phase: "Phase 1",
@@ -146,6 +146,12 @@ function main() {
     process.exit(1);
   }
 
+  const browserE2E = runCommand(process.execPath, [path.join("scripts", "browser-e2e-topbar-warnings.js")]);
+  if (!browserE2E.ok) {
+    console.error(browserE2E.stderr || browserE2E.stdout);
+    process.exit(1);
+  }
+
   const test = runCommand(process.execPath, [path.join("tests", "convert-session.test.js")]);
   if (!test.ok) {
     console.error(test.stderr || test.stdout);
@@ -190,6 +196,7 @@ function main() {
     build.stdout.trim(),
     verify.stdout.trim(),
     browserAudit.stdout.trim(),
+    browserE2E.stdout.trim(),
     test.stdout.trim(),
     "```",
     "",
@@ -204,6 +211,7 @@ function main() {
     "",
     "以下项已通过 **静态 Network/CSP 审计**（`scripts/browser-csp-audit.js`）与单元测试等价验证：",
     "",
+    "- 粘贴示例 → 切换 AxonHub → 顶栏 `#synthetic-warnings` 红色可见：`scripts/browser-e2e-topbar-warnings.js`",
     "- 粘贴示例 → 切换 7 格式 → 复制 → 下载 → 清空：`testAllSevenFormatsProduceOutput` 等",
     "- Network 0 请求：脚本无 fetch/XHR/WebSocket/sendBeacon；CSP `connect-src 'none'`",
     "- Console CSP 违规：静态审计无外链脚本/样式/内联事件处理器",

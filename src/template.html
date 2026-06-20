@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#F4EDE4" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; connect-src https://chatgpt.com; base-uri 'none'; form-action 'none';"
+      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none';"
     />
     <meta name="build-version" content="v<!-- BUILD:VERSION -->" />
     <meta name="build-date" content="<!-- BUILD:DATE -->" />
@@ -307,10 +307,10 @@
         flex-wrap: wrap;
         align-items: center;
         justify-content: space-between;
-        gap: 10px;
-        height: var(--topbar-h);
+        gap: 10px 14px;
         min-height: var(--topbar-h);
-        padding: 0 20px;
+        height: auto;
+        padding: 8px 20px;
         border-bottom: 1px solid color-mix(in srgb, var(--accent) 12%, var(--line));
         background: color-mix(in srgb, var(--surface) 94%, var(--accent-soft));
         backdrop-filter: blur(10px);
@@ -318,14 +318,48 @@
         box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 6%, transparent);
       }
 
+      .topbar-leading {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        column-gap: 12px;
+        row-gap: 6px;
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+
       .terra-breadcrumb {
         display: flex;
-        flex-wrap: wrap;
+        flex: 0 0 auto;
         align-items: center;
-        gap: 6px;
-        min-height: var(--topbar-h);
+        min-width: 0;
         font-size: 13px;
         color: var(--muted);
+      }
+
+      .terra-breadcrumb-current {
+        font-family: var(--display);
+        font-size: 14px;
+        line-height: 1.2;
+        color: var(--text);
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .topbar-synthetic-warnings {
+        grid-column: 2;
+        min-width: 0;
+        padding: 6px 12px;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .topbar-synthetic-warnings.is-visible {
+        display: block;
+      }
+
+      .topbar-synthetic-warnings div + div {
+        margin-top: 4px;
       }
 
       .terra-breadcrumb a {
@@ -339,14 +373,6 @@
 
       .terra-breadcrumb-sep {
         opacity: 0.5;
-      }
-
-      .terra-breadcrumb-current {
-        font-family: var(--display);
-        font-size: 14px;
-        line-height: 1.2;
-        color: var(--text);
-        font-weight: 700;
       }
 
       .terra-topbar-right {
@@ -593,7 +619,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 10px;
-        padding: 12px 14px;
+        padding: 10px 14px;
         border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--line));
         border-radius: var(--radius);
         background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--accent-soft) 35%, var(--surface)));
@@ -723,12 +749,6 @@
       .button:disabled {
         cursor: not-allowed;
         opacity: 0.5;
-      }
-
-      .button.is-loading {
-        cursor: wait;
-        pointer-events: none;
-        opacity: 0.65;
       }
 
       .button-warning {
@@ -1061,13 +1081,6 @@
         line-height: 1.4;
       }
 
-      .output-meta .synthetic-warnings {
-        margin-bottom: 8px;
-        font-size: 10px;
-        line-height: 1.45;
-        flex-shrink: 0;
-      }
-
       .output-meta .summary {
         margin-bottom: 8px;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1270,7 +1283,7 @@
       }
 
       .notice,
-      .synthetic-warnings {
+      .synthetic-warnings:not(.topbar-synthetic-warnings) {
         margin: 0 0 12px;
         padding: 10px 12px;
         border: 1px solid color-mix(in srgb, var(--warning) 30%, var(--line));
@@ -1279,6 +1292,18 @@
         color: var(--warning);
         font-size: 12px;
         line-height: 1.45;
+      }
+
+      .synthetic-warnings.topbar-synthetic-warnings {
+        margin: 0;
+        border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+        background: var(--danger-bg);
+        color: var(--danger);
+        font-weight: 600;
+      }
+
+      .synthetic-warnings.topbar-synthetic-warnings.is-visible {
+        display: block;
       }
 
       .synthetic-warnings {
@@ -1461,6 +1486,15 @@
           align-items: stretch;
         }
 
+        .topbar-leading {
+          grid-template-columns: 1fr;
+        }
+
+        .topbar-synthetic-warnings {
+          grid-column: 1;
+          font-size: 11px;
+        }
+
         .segmented {
           grid-template-columns: repeat(2, minmax(0, 1fr));
           width: 100%;
@@ -1582,10 +1616,17 @@
       </div>
 
       <div class="terra-main">
-        <header class="terra-topbar">
-          <nav class="terra-breadcrumb" aria-label="面包屑">
-            <span class="terra-breadcrumb-current" id="breadcrumb-current">ChatGPT会话转换</span>
-          </nav>
+        <header class="terra-topbar" id="terra-topbar">
+          <div class="topbar-leading">
+            <nav class="terra-breadcrumb" aria-label="面包屑">
+              <span class="terra-breadcrumb-current" id="breadcrumb-current">ChatGPT会话转换</span>
+            </nav>
+            <div
+              class="synthetic-warnings topbar-synthetic-warnings"
+              id="synthetic-warnings"
+              aria-live="polite"
+            ></div>
+          </div>
           <div class="terra-topbar-right">
             <span class="status-chip is-secure"><span class="status-dot"></span>本地解析</span>
             <span class="status-chip is-secure">不上传 token</span>
@@ -1610,11 +1651,13 @@
                 <button type="button" data-format="codexmanager" aria-pressed="false">Codex-Manager</button>
               </div>
               <div class="actions">
-                <button
+                <a
                   class="button button-secondary"
                   id="open-session-link"
-                  type="button"
-                >会话JSON</button>
+                  href="https://chatgpt.com/api/auth/session"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >会话JSON</a>
                 <button class="button button-secondary" id="copy-output" type="button" disabled>复制输出</button>
                 <button class="button button-primary" id="download-output" type="button" disabled>下载 JSON</button>
               </div>
@@ -1699,7 +1742,6 @@
                       </div>
                       <p class="output-meta-hint">账号摘要</p>
                     </div>
-                    <div class="synthetic-warnings" id="synthetic-warnings" aria-live="polite"></div>
                     <div class="issues" id="issues"></div>
                     <div class="summary" aria-label="转换统计">
                       <div class="stat">

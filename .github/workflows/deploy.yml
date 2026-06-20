@@ -27,6 +27,9 @@ jobs:
         with:
           node-version: "22"
 
+      - run: npm ci
+      - run: npx playwright install chromium
+
       - name: Build and verify
         run: npm run acceptance
 

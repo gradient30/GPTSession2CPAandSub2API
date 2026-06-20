@@ -7,8 +7,6 @@ const state = {
 };
 
 let lastSafeInput = "";
-let sessionFetchActive = false;
-let sessionFetchCountdownTimer = null;
 
 const THEME_STORAGE_KEY = "gpt-session-converter-theme";
 
@@ -29,7 +27,6 @@ const elements = {
   inputStatus: document.querySelector("#input-status"),
   issues: document.querySelector("#issues"),
   loadExample: document.querySelector("#load-example"),
-  openSessionLink: document.querySelector("#open-session-link"),
   output: document.querySelector("#output"),
   outputStatus: document.querySelector("#output-status"),
   outputSubtitle: document.querySelector("#output-subtitle"),
@@ -253,6 +250,10 @@ function renderIssues() {
 }
 
 function renderSyntheticWarnings() {
+  if (!elements.syntheticWarnings) {
+    return;
+  }
+
   const warnings = getSyntheticWarnings(state.converted, state.format);
   if (!warnings.length) {
     elements.syntheticWarnings.classList.remove("is-visible");
@@ -264,238 +265,6 @@ function renderSyntheticWarnings() {
   elements.syntheticWarnings.innerHTML = warnings
     .map((warning) => `<div>${escapeHtml(warning)}</div>`)
     .join("");
-}
-
-function clearSessionFetchCountdown() {
-  if (sessionFetchCountdownTimer !== null) {
-    window.clearInterval(sessionFetchCountdownTimer);
-    sessionFetchCountdownTimer = null;
-  }
-}
-
-function setSessionLinkBusy(busy, buttonLabel) {
-  const button = elements.openSessionLink;
-  if (!button) {
-    return;
-  }
-
-  if (!button.dataset.defaultLabel) {
-    button.dataset.defaultLabel = button.textContent.trim();
-  }
-
-  button.disabled = busy;
-  button.classList.toggle("is-loading", busy);
-  button.setAttribute("aria-busy", String(busy));
-  button.textContent = busy && buttonLabel ? buttonLabel : button.dataset.defaultLabel;
-}
-
-function updateSessionFetchCountdown(deadlineMs, getMessage, tone = "") {
-  const leftMs = deadlineMs - Date.now();
-  if (leftMs <= 0) {
-    return 0;
-  }
-
-  const seconds = Math.max(1, Math.ceil(leftMs / 1000));
-  setStatus(elements.inputStatus, getMessage(seconds, leftMs), tone);
-
-  const button = elements.openSessionLink;
-  if (button?.classList.contains("is-loading")) {
-    button.textContent = `获取中 ${seconds}s`;
-  }
-
-  return leftMs;
-}
-
-function startSessionFetchCountdown(deadlineMs, getMessage, tone = "") {
-  clearSessionFetchCountdown();
-  updateSessionFetchCountdown(deadlineMs, getMessage, tone);
-  sessionFetchCountdownTimer = window.setInterval(() => {
-    updateSessionFetchCountdown(deadlineMs, getMessage, tone);
-  }, 200);
-}
-
-function waitUntilDeadline(deadlineMs, getMessage, tone = "") {
-  return new Promise((resolve) => {
-    startSessionFetchCountdown(deadlineMs, getMessage, tone);
-
-    const check = () => {
-      const leftMs = deadlineMs - Date.now();
-      if (!sessionFetchActive || leftMs <= 0) {
-        clearSessionFetchCountdown();
-        resolve();
-        return;
-      }
-
-      window.setTimeout(check, Math.min(200, leftMs));
-    };
-
-    check();
-  });
-}
-
-function openChatGptSessionPage() {
-  window.open(CHATGPT_SESSION_URL, "_blank", "noopener,noreferrer");
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-}
-
-async function requestCrossSiteCookieAccess() {
-  if (typeof document.requestStorageAccess !== "function") {
-    return;
-  }
-
-  try {
-    if (typeof document.hasStorageAccess === "function" && (await document.hasStorageAccess())) {
-      return;
-    }
-
-    await document.requestStorageAccess();
-  } catch {
-    // 部分浏览器不支持或用户拒绝时，仍尝试 fetch。
-  }
-}
-
-async function fetchChatGptSession() {
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), SESSION_FETCH_TIMEOUT_MS);
-
-  try {
-    return await fetch(CHATGPT_SESSION_URL, {
-      method: "GET",
-      credentials: "include",
-      cache: "no-store",
-      signal: controller.signal,
-      headers: {
-        Accept: "application/json, text/plain, */*",
-      },
-    });
-  } finally {
-    window.clearTimeout(timer);
-  }
-}
-
-async function fetchChatGptSessionPayload() {
-  await requestCrossSiteCookieAccess();
-
-  const response = await fetchChatGptSession();
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-
-  const text = await response.text();
-  if (!text.trim()) {
-    throw new Error("session 接口返回为空");
-  }
-
-  let parsed;
-  try {
-    parsed = JSON.parse(text);
-  } catch (error) {
-    throw new Error(`session 响应不是有效 JSON：${error instanceof Error ? error.message : "parse error"}`);
-  }
-
-  const documents = collectSessionLikeObjects(parsed, "chatgpt-session");
-  if (!documents.length) {
-    throw new Error("响应中未找到有效的 ChatGPT session（需包含 accessToken 与用户信息）");
-  }
-
-  return documents;
-}
-
-function applySessionDocuments(documents) {
-  const text = documents.length === 1
-    ? JSON.stringify(documents[0].value, null, 2)
-    : JSON.stringify(documents.map((item) => item.value), null, 2);
-
-  elements.input.value = text;
-  lastSafeInput = text;
-  scheduleConvert();
-
-  if (state.converted.length > 0) {
-    setStatus(elements.inputStatus, "已自动填入 ChatGPT 会话 JSON。", "ok");
-  } else {
-    setStatus(elements.inputStatus, "已填入 session JSON，但未能解析为可转换账号。", "warning");
-  }
-}
-
-async function waitBeforeSessionFallback(minWaitDeadline) {
-  await waitUntilDeadline(
-    minWaitDeadline,
-    (seconds) => `[2/3] 自动获取未成功，继续等待 ${seconds} 秒后进入备用方案…`,
-    "warning",
-  );
-}
-
-async function fillSessionFromChatGpt() {
-  if (!elements.openSessionLink || !elements.input) {
-    return;
-  }
-
-  if (sessionFetchActive) {
-    setStatus(elements.inputStatus, "会话 JSON 正在获取中，请勿重复点击。", "warning");
-    return;
-  }
-
-  sessionFetchActive = true;
-  const startedAt = Date.now();
-  const fetchDeadline = startedAt + SESSION_FETCH_TIMEOUT_MS;
-  const minWaitDeadline = startedAt + SESSION_FETCH_MIN_WAIT_MS;
-  let lastError = null;
-
-  setSessionLinkBusy(true, "获取中…");
-  startSessionFetchCountdown(
-    fetchDeadline,
-    (seconds) => `[1/3] 正在从 ChatGPT 获取会话 JSON（剩余 ${seconds} 秒）…`,
-  );
-
-  try {
-    for (let attempt = 1; attempt <= SESSION_FETCH_RETRY_COUNT; attempt += 1) {
-      try {
-        if (attempt > 1) {
-          clearSessionFetchCountdown();
-          setStatus(elements.inputStatus, `[1/3] 第 ${attempt} 次重试获取会话 JSON…`);
-          startSessionFetchCountdown(
-            fetchDeadline,
-            (seconds) => `[1/3] 第 ${attempt} 次重试（剩余 ${seconds} 秒）…`,
-          );
-          await sleep(SESSION_FETCH_RETRY_DELAY_MS);
-        }
-
-        const documents = await fetchChatGptSessionPayload();
-        clearSessionFetchCountdown();
-        applySessionDocuments(documents);
-        return;
-      } catch (error) {
-        lastError = error;
-      }
-    }
-
-    clearSessionFetchCountdown();
-    const reason = lastError instanceof Error ? lastError.message : "获取失败";
-    await waitBeforeSessionFallback(minWaitDeadline);
-
-    const openDeadline = Date.now() + SESSION_FALLBACK_OPEN_DELAY_MS;
-    await waitUntilDeadline(
-      openDeadline,
-      (seconds) => `[3/3] 即将打开 session 页面（${seconds} 秒），请复制 JSON 后粘贴。`,
-      "warning",
-    );
-
-    openChatGptSessionPage();
-    setStatus(
-      elements.inputStatus,
-      `无法自动填入（${reason}），已打开 session 页面，请复制 JSON 后粘贴到输入框。`,
-      "warning",
-    );
-  } finally {
-    clearSessionFetchCountdown();
-    sessionFetchActive = false;
-    setSessionLinkBusy(false);
-  }
 }
 
 function scheduleConvert() {
@@ -703,10 +472,6 @@ elements.loadExample.addEventListener("click", () => {
   elements.input.value = JSON.stringify(exampleSession, null, 2);
   lastSafeInput = elements.input.value;
   scheduleConvert();
-});
-
-elements.openSessionLink?.addEventListener("click", () => {
-  fillSessionFromChatGpt();
 });
 
 bindDragAndDrop();

@@ -7,12 +7,12 @@
     <meta name="theme-color" content="#F4EDE4" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; connect-src https://chatgpt.com; base-uri 'none'; form-action 'none';"
+      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; base-uri 'none'; form-action 'none';"
     />
     <meta name="build-version" content="v1.1.0" />
     <meta name="build-date" content="2026-06-20" />
-    <meta name="build-sha256" content="d692296e2761" />
-    <meta name="build-sha256-full" content="d692296e2761e8f18aa8de96e1868a242f3ffb0b857686e15286c7d8d3f69409" />
+    <meta name="build-sha256" content="df8f72663535" />
+    <meta name="build-sha256-full" content="df8f7266353558d345d44499936b3f0ee7997c66cfa0f600d18cd8e1ef355d11" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" sizes="any" />
     <style>
       :root,
@@ -307,10 +307,10 @@
         flex-wrap: wrap;
         align-items: center;
         justify-content: space-between;
-        gap: 10px;
-        height: var(--topbar-h);
+        gap: 10px 14px;
         min-height: var(--topbar-h);
-        padding: 0 20px;
+        height: auto;
+        padding: 8px 20px;
         border-bottom: 1px solid color-mix(in srgb, var(--accent) 12%, var(--line));
         background: color-mix(in srgb, var(--surface) 94%, var(--accent-soft));
         backdrop-filter: blur(10px);
@@ -318,14 +318,48 @@
         box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 6%, transparent);
       }
 
+      .topbar-leading {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: center;
+        column-gap: 12px;
+        row-gap: 6px;
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+
       .terra-breadcrumb {
         display: flex;
-        flex-wrap: wrap;
+        flex: 0 0 auto;
         align-items: center;
-        gap: 6px;
-        min-height: var(--topbar-h);
+        min-width: 0;
         font-size: 13px;
         color: var(--muted);
+      }
+
+      .terra-breadcrumb-current {
+        font-family: var(--display);
+        font-size: 14px;
+        line-height: 1.2;
+        color: var(--text);
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .topbar-synthetic-warnings {
+        grid-column: 2;
+        min-width: 0;
+        padding: 6px 12px;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .topbar-synthetic-warnings.is-visible {
+        display: block;
+      }
+
+      .topbar-synthetic-warnings div + div {
+        margin-top: 4px;
       }
 
       .terra-breadcrumb a {
@@ -339,14 +373,6 @@
 
       .terra-breadcrumb-sep {
         opacity: 0.5;
-      }
-
-      .terra-breadcrumb-current {
-        font-family: var(--display);
-        font-size: 14px;
-        line-height: 1.2;
-        color: var(--text);
-        font-weight: 700;
       }
 
       .terra-topbar-right {
@@ -593,7 +619,7 @@
         align-items: center;
         justify-content: space-between;
         gap: 10px;
-        padding: 12px 14px;
+        padding: 10px 14px;
         border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--line));
         border-radius: var(--radius);
         background: linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--accent-soft) 35%, var(--surface)));
@@ -723,12 +749,6 @@
       .button:disabled {
         cursor: not-allowed;
         opacity: 0.5;
-      }
-
-      .button.is-loading {
-        cursor: wait;
-        pointer-events: none;
-        opacity: 0.65;
       }
 
       .button-warning {
@@ -1061,13 +1081,6 @@
         line-height: 1.4;
       }
 
-      .output-meta .synthetic-warnings {
-        margin-bottom: 8px;
-        font-size: 10px;
-        line-height: 1.45;
-        flex-shrink: 0;
-      }
-
       .output-meta .summary {
         margin-bottom: 8px;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1270,7 +1283,7 @@
       }
 
       .notice,
-      .synthetic-warnings {
+      .synthetic-warnings:not(.topbar-synthetic-warnings) {
         margin: 0 0 12px;
         padding: 10px 12px;
         border: 1px solid color-mix(in srgb, var(--warning) 30%, var(--line));
@@ -1279,6 +1292,18 @@
         color: var(--warning);
         font-size: 12px;
         line-height: 1.45;
+      }
+
+      .synthetic-warnings.topbar-synthetic-warnings {
+        margin: 0;
+        border-color: color-mix(in srgb, var(--danger) 45%, var(--line));
+        background: var(--danger-bg);
+        color: var(--danger);
+        font-weight: 600;
+      }
+
+      .synthetic-warnings.topbar-synthetic-warnings.is-visible {
+        display: block;
       }
 
       .synthetic-warnings {
@@ -1461,6 +1486,15 @@
           align-items: stretch;
         }
 
+        .topbar-leading {
+          grid-template-columns: 1fr;
+        }
+
+        .topbar-synthetic-warnings {
+          grid-column: 1;
+          font-size: 11px;
+        }
+
         .segmented {
           grid-template-columns: repeat(2, minmax(0, 1fr));
           width: 100%;
@@ -1582,14 +1616,21 @@
       </div>
 
       <div class="terra-main">
-        <header class="terra-topbar">
-          <nav class="terra-breadcrumb" aria-label="面包屑">
-            <span class="terra-breadcrumb-current" id="breadcrumb-current">ChatGPT会话转换</span>
-          </nav>
+        <header class="terra-topbar" id="terra-topbar">
+          <div class="topbar-leading">
+            <nav class="terra-breadcrumb" aria-label="面包屑">
+              <span class="terra-breadcrumb-current" id="breadcrumb-current">ChatGPT会话转换</span>
+            </nav>
+            <div
+              class="synthetic-warnings topbar-synthetic-warnings"
+              id="synthetic-warnings"
+              aria-live="polite"
+            ></div>
+          </div>
           <div class="terra-topbar-right">
             <span class="status-chip is-secure"><span class="status-dot"></span>本地解析</span>
             <span class="status-chip is-secure">不上传 token</span>
-            <span class="status-chip" title="内联脚本 SHA256（完整值见 meta build-sha256-full）">v1.1.0 · SHA256 d692296e2761</span>
+            <span class="status-chip" title="内联脚本 SHA256（完整值见 meta build-sha256-full）">v1.1.0 · SHA256 df8f72663535</span>
             <button class="theme-toggle" id="theme-toggle" type="button" aria-label="切换明/暗主题">
               <span id="theme-toggle-icon" aria-hidden="true">☀</span>
               <span id="theme-toggle-label">浅色</span>
@@ -1610,11 +1651,13 @@
                 <button type="button" data-format="codexmanager" aria-pressed="false">Codex-Manager</button>
               </div>
               <div class="actions">
-                <button
+                <a
                   class="button button-secondary"
                   id="open-session-link"
-                  type="button"
-                >会话JSON</button>
+                  href="https://chatgpt.com/api/auth/session"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >会话JSON</a>
                 <button class="button button-secondary" id="copy-output" type="button" disabled>复制输出</button>
                 <button class="button button-primary" id="download-output" type="button" disabled>下载 JSON</button>
               </div>
@@ -1699,7 +1742,6 @@
                       </div>
                       <p class="output-meta-hint">账号摘要</p>
                     </div>
-                    <div class="synthetic-warnings" id="synthetic-warnings" aria-live="polite"></div>
                     <div class="issues" id="issues"></div>
                     <div class="summary" aria-label="转换统计">
                       <div class="stat">
@@ -1747,7 +1789,7 @@
 
         <footer class="terra-footer">
           <p class="page-footer">
-            构建信息：v1.1.0 · 2026-06-20 · 内联脚本 SHA256 前 12 位 d692296e2761。
+            构建信息：v1.1.0 · 2026-06-20 · 内联脚本 SHA256 前 12 位 df8f72663535。
           </p>
         </footer>
       </div>
@@ -1775,12 +1817,6 @@ const AXONHUB_PLACEHOLDER_NOTE = "refresh_token 为占位值；access_token 过�
 
 const AXONHUB_PLACEHOLDER_REFRESH_TOKEN = "__missing_refresh_token__";
 const SENSITIVE_SKIP_KEY = "gpt-session-converter-sensitive-skip";
-const CHATGPT_SESSION_URL = "https://chatgpt.com/api/auth/session";
-const SESSION_FETCH_TIMEOUT_MS = 20000;
-const SESSION_FETCH_MIN_WAIT_MS = 3500;
-const SESSION_FALLBACK_OPEN_DELAY_MS = 800;
-const SESSION_FETCH_RETRY_COUNT = 2;
-const SESSION_FETCH_RETRY_DELAY_MS = 1500;
 
 function formatSourceLabel(sourceName) {
   if (typeof sourceName !== "string" || sourceName.trim() === "") {
@@ -2571,8 +2607,6 @@ const state = {
 };
 
 let lastSafeInput = "";
-let sessionFetchActive = false;
-let sessionFetchCountdownTimer = null;
 
 const THEME_STORAGE_KEY = "gpt-session-converter-theme";
 
@@ -2593,7 +2627,6 @@ const elements = {
   inputStatus: document.querySelector("#input-status"),
   issues: document.querySelector("#issues"),
   loadExample: document.querySelector("#load-example"),
-  openSessionLink: document.querySelector("#open-session-link"),
   output: document.querySelector("#output"),
   outputStatus: document.querySelector("#output-status"),
   outputSubtitle: document.querySelector("#output-subtitle"),
@@ -2817,6 +2850,10 @@ function renderIssues() {
 }
 
 function renderSyntheticWarnings() {
+  if (!elements.syntheticWarnings) {
+    return;
+  }
+
   const warnings = getSyntheticWarnings(state.converted, state.format);
   if (!warnings.length) {
     elements.syntheticWarnings.classList.remove("is-visible");
@@ -2828,238 +2865,6 @@ function renderSyntheticWarnings() {
   elements.syntheticWarnings.innerHTML = warnings
     .map((warning) => `<div>${escapeHtml(warning)}</div>`)
     .join("");
-}
-
-function clearSessionFetchCountdown() {
-  if (sessionFetchCountdownTimer !== null) {
-    window.clearInterval(sessionFetchCountdownTimer);
-    sessionFetchCountdownTimer = null;
-  }
-}
-
-function setSessionLinkBusy(busy, buttonLabel) {
-  const button = elements.openSessionLink;
-  if (!button) {
-    return;
-  }
-
-  if (!button.dataset.defaultLabel) {
-    button.dataset.defaultLabel = button.textContent.trim();
-  }
-
-  button.disabled = busy;
-  button.classList.toggle("is-loading", busy);
-  button.setAttribute("aria-busy", String(busy));
-  button.textContent = busy && buttonLabel ? buttonLabel : button.dataset.defaultLabel;
-}
-
-function updateSessionFetchCountdown(deadlineMs, getMessage, tone = "") {
-  const leftMs = deadlineMs - Date.now();
-  if (leftMs <= 0) {
-    return 0;
-  }
-
-  const seconds = Math.max(1, Math.ceil(leftMs / 1000));
-  setStatus(elements.inputStatus, getMessage(seconds, leftMs), tone);
-
-  const button = elements.openSessionLink;
-  if (button?.classList.contains("is-loading")) {
-    button.textContent = `获取中 ${seconds}s`;
-  }
-
-  return leftMs;
-}
-
-function startSessionFetchCountdown(deadlineMs, getMessage, tone = "") {
-  clearSessionFetchCountdown();
-  updateSessionFetchCountdown(deadlineMs, getMessage, tone);
-  sessionFetchCountdownTimer = window.setInterval(() => {
-    updateSessionFetchCountdown(deadlineMs, getMessage, tone);
-  }, 200);
-}
-
-function waitUntilDeadline(deadlineMs, getMessage, tone = "") {
-  return new Promise((resolve) => {
-    startSessionFetchCountdown(deadlineMs, getMessage, tone);
-
-    const check = () => {
-      const leftMs = deadlineMs - Date.now();
-      if (!sessionFetchActive || leftMs <= 0) {
-        clearSessionFetchCountdown();
-        resolve();
-        return;
-      }
-
-      window.setTimeout(check, Math.min(200, leftMs));
-    };
-
-    check();
-  });
-}
-
-function openChatGptSessionPage() {
-  window.open(CHATGPT_SESSION_URL, "_blank", "noopener,noreferrer");
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-}
-
-async function requestCrossSiteCookieAccess() {
-  if (typeof document.requestStorageAccess !== "function") {
-    return;
-  }
-
-  try {
-    if (typeof document.hasStorageAccess === "function" && (await document.hasStorageAccess())) {
-      return;
-    }
-
-    await document.requestStorageAccess();
-  } catch {
-    // 部分浏览器不支持或用户拒绝时，仍尝试 fetch。
-  }
-}
-
-async function fetchChatGptSession() {
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), SESSION_FETCH_TIMEOUT_MS);
-
-  try {
-    return await fetch(CHATGPT_SESSION_URL, {
-      method: "GET",
-      credentials: "include",
-      cache: "no-store",
-      signal: controller.signal,
-      headers: {
-        Accept: "application/json, text/plain, */*",
-      },
-    });
-  } finally {
-    window.clearTimeout(timer);
-  }
-}
-
-async function fetchChatGptSessionPayload() {
-  await requestCrossSiteCookieAccess();
-
-  const response = await fetchChatGptSession();
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-
-  const text = await response.text();
-  if (!text.trim()) {
-    throw new Error("session 接口返回为空");
-  }
-
-  let parsed;
-  try {
-    parsed = JSON.parse(text);
-  } catch (error) {
-    throw new Error(`session 响应不是有效 JSON：${error instanceof Error ? error.message : "parse error"}`);
-  }
-
-  const documents = collectSessionLikeObjects(parsed, "chatgpt-session");
-  if (!documents.length) {
-    throw new Error("响应中未找到有效的 ChatGPT session（需包含 accessToken 与用户信息）");
-  }
-
-  return documents;
-}
-
-function applySessionDocuments(documents) {
-  const text = documents.length === 1
-    ? JSON.stringify(documents[0].value, null, 2)
-    : JSON.stringify(documents.map((item) => item.value), null, 2);
-
-  elements.input.value = text;
-  lastSafeInput = text;
-  scheduleConvert();
-
-  if (state.converted.length > 0) {
-    setStatus(elements.inputStatus, "已自动填入 ChatGPT 会话 JSON。", "ok");
-  } else {
-    setStatus(elements.inputStatus, "已填入 session JSON，但未能解析为可转换账号。", "warning");
-  }
-}
-
-async function waitBeforeSessionFallback(minWaitDeadline) {
-  await waitUntilDeadline(
-    minWaitDeadline,
-    (seconds) => `[2/3] 自动获取未成功，继续等待 ${seconds} 秒后进入备用方案…`,
-    "warning",
-  );
-}
-
-async function fillSessionFromChatGpt() {
-  if (!elements.openSessionLink || !elements.input) {
-    return;
-  }
-
-  if (sessionFetchActive) {
-    setStatus(elements.inputStatus, "会话 JSON 正在获取中，请勿重复点击。", "warning");
-    return;
-  }
-
-  sessionFetchActive = true;
-  const startedAt = Date.now();
-  const fetchDeadline = startedAt + SESSION_FETCH_TIMEOUT_MS;
-  const minWaitDeadline = startedAt + SESSION_FETCH_MIN_WAIT_MS;
-  let lastError = null;
-
-  setSessionLinkBusy(true, "获取中…");
-  startSessionFetchCountdown(
-    fetchDeadline,
-    (seconds) => `[1/3] 正在从 ChatGPT 获取会话 JSON（剩余 ${seconds} 秒）…`,
-  );
-
-  try {
-    for (let attempt = 1; attempt <= SESSION_FETCH_RETRY_COUNT; attempt += 1) {
-      try {
-        if (attempt > 1) {
-          clearSessionFetchCountdown();
-          setStatus(elements.inputStatus, `[1/3] 第 ${attempt} 次重试获取会话 JSON…`);
-          startSessionFetchCountdown(
-            fetchDeadline,
-            (seconds) => `[1/3] 第 ${attempt} 次重试（剩余 ${seconds} 秒）…`,
-          );
-          await sleep(SESSION_FETCH_RETRY_DELAY_MS);
-        }
-
-        const documents = await fetchChatGptSessionPayload();
-        clearSessionFetchCountdown();
-        applySessionDocuments(documents);
-        return;
-      } catch (error) {
-        lastError = error;
-      }
-    }
-
-    clearSessionFetchCountdown();
-    const reason = lastError instanceof Error ? lastError.message : "获取失败";
-    await waitBeforeSessionFallback(minWaitDeadline);
-
-    const openDeadline = Date.now() + SESSION_FALLBACK_OPEN_DELAY_MS;
-    await waitUntilDeadline(
-      openDeadline,
-      (seconds) => `[3/3] 即将打开 session 页面（${seconds} 秒），请复制 JSON 后粘贴。`,
-      "warning",
-    );
-
-    openChatGptSessionPage();
-    setStatus(
-      elements.inputStatus,
-      `无法自动填入（${reason}），已打开 session 页面，请复制 JSON 后粘贴到输入框。`,
-      "warning",
-    );
-  } finally {
-    clearSessionFetchCountdown();
-    sessionFetchActive = false;
-    setSessionLinkBusy(false);
-  }
 }
 
 function scheduleConvert() {
@@ -3267,10 +3072,6 @@ elements.loadExample.addEventListener("click", () => {
   elements.input.value = JSON.stringify(exampleSession, null, 2);
   lastSafeInput = elements.input.value;
   scheduleConvert();
-});
-
-elements.openSessionLink?.addEventListener("click", () => {
-  fillSessionFromChatGpt();
 });
 
 bindDragAndDrop();

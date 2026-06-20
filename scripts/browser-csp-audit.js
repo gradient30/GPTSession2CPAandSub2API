@@ -30,8 +30,8 @@ function main() {
     ["no XMLHttpRequest in script", !/XMLHttpRequest/.test(script)],
     ["no WebSocket in script", !/WebSocket/.test(script)],
     ["no sendBeacon in script", !/sendBeacon/.test(script)],
-    ["csp connect-src chatgpt only", html.includes("connect-src https://chatgpt.com")],
-    ["session fetch uses chatgpt url only", /fetch\(CHATGPT_SESSION_URL/.test(script)],
+    ["csp connect-src none", html.includes("connect-src 'none'")],
+    ["session json link", html.includes('href="https://chatgpt.com/api/auth/session"')],
     ["favicon is local", /href="\.\/favicon\.svg"/.test(html)],
   ];
 
