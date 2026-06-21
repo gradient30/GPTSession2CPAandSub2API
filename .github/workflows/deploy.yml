@@ -110,7 +110,7 @@ jobs:
       - name: Ensure Cloudflare Pages project exists
         run: |
           list_json="$(wrangler pages project list --json 2>/dev/null || true)"
-          if echo "$list_json" | jq -e --arg name "$CF_PAGES_PROJECT" '
+          if [ -n "$list_json" ] && echo "$list_json" | jq -e --arg name "$CF_PAGES_PROJECT" '
             (.result // .)[] | select(.name == $name)
           ' >/dev/null; then
             echo "Pages project already exists: $CF_PAGES_PROJECT"
